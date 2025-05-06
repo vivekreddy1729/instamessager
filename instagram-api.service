@@ -1,0 +1,16 @@
+[Unit]
+Description=Instagram API Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/instagram-api
+Environment="PATH=/home/ubuntu/instagram-api/venv/bin"
+Environment="DISPLAY=:99"
+ExecStartPre=/usr/bin/Xvfb :99 -screen 0 1280x1024x24 -ac
+ExecStart=/home/ubuntu/instagram-api/venv/bin/python /home/ubuntu/instagram-api/run_api.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

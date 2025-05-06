@@ -44,11 +44,15 @@ class InstagramMessageSender:
         """
         logger.info("Setting up Chrome WebDriver...")
 
+        # Detect operating system
+        is_windows = os.name == 'nt'
+
         # Configure Chrome options
         chrome_options = Options()
         if headless:
-            chrome_options.add_argument("--headless")
+            chrome_options.add_argument("--headless=new")  # Updated headless mode
 
+        # Common options for all platforms
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-notifications")
@@ -56,8 +60,24 @@ class InstagramMessageSender:
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--start-maximized")
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+
+        # Platform-specific options
+        if is_windows:
+            chrome_options.add_argument("--start-maximized")
+            user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+        else:
+            # Linux-specific options
+            chrome_options.add_argument("--disable-setuid-sandbox")
+            chrome_options.add_argument("--remote-debugging-port=9222")
+            user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+
+        chrome_options.add_argument(f"--user-agent={user_agent}")
+
+        # Additional options for headless mode
+        if headless:
+            chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option("useAutomationExtension", False)
 
         # Download ChromeDriver if it doesn't exist
         chromedriver_path = self._download_chromedriver()
@@ -65,6 +85,18 @@ class InstagramMessageSender:
         # Create and return the WebDriver
         service = Service(executable_path=chromedriver_path)
         driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        # Additional settings after driver initialization
+        if headless:
+            # Execute CDP commands to make headless Chrome less detectable
+            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                """
+            })
+
         return driver
 
     def _download_chromedriver(self):
@@ -76,9 +108,18 @@ class InstagramMessageSender:
         """
         logger.info("Checking for ChromeDriver...")
 
-        # Define the ChromeDriver path
+        # Detect operating system
+        is_windows = os.name == 'nt'
+
+        # Define the ChromeDriver path based on OS
         chromedriver_dir = os.path.join(os.getcwd(), "chromedriver")
-        chromedriver_path = os.path.join(chromedriver_dir, "chromedriver.exe")
+
+        if is_windows:
+            chromedriver_filename = "chromedriver.exe"
+        else:
+            chromedriver_filename = "chromedriver"
+
+        chromedriver_path = os.path.join(chromedriver_dir, chromedriver_filename)
 
         # Check if ChromeDriver already exists
         if os.path.exists(chromedriver_path):
@@ -89,31 +130,59 @@ class InstagramMessageSender:
         if not os.path.exists(chromedriver_dir):
             os.makedirs(chromedriver_dir)
 
-        # Download the latest stable ChromeDriver for Windows
-        logger.info("Downloading ChromeDriver for Windows...")
-        chromedriver_url = "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/win32/chromedriver-win32.zip"
-
         try:
-            # Download the zip file
-            response = requests.get(chromedriver_url)
-            response.raise_for_status()  # Raise an exception for HTTP errors
+            if is_windows:
+                # Download the latest stable ChromeDriver for Windows
+                logger.info("Downloading ChromeDriver for Windows...")
+                chromedriver_url = "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/win32/chromedriver-win32.zip"
 
-            # Extract the zip file
-            with zipfile.ZipFile(io.BytesIO(response.content)) as zip_file:
-                zip_file.extractall(chromedriver_dir)
+                # Download the zip file
+                response = requests.get(chromedriver_url)
+                response.raise_for_status()  # Raise an exception for HTTP errors
 
-            # The extracted path will be in a subdirectory
-            extracted_driver_path = os.path.join(chromedriver_dir, "chromedriver-win32", "chromedriver.exe")
+                # Extract the zip file
+                with zipfile.ZipFile(io.BytesIO(response.content)) as zip_file:
+                    zip_file.extractall(chromedriver_dir)
 
-            # Move the chromedriver.exe to the main directory
-            if os.path.exists(extracted_driver_path):
-                import shutil
-                shutil.copy(extracted_driver_path, chromedriver_path)
-                logger.info(f"ChromeDriver downloaded and extracted to {chromedriver_path}")
-                return chromedriver_path
+                # The extracted path will be in a subdirectory
+                extracted_driver_path = os.path.join(chromedriver_dir, "chromedriver-win32", "chromedriver.exe")
+
+                # Move the chromedriver.exe to the main directory
+                if os.path.exists(extracted_driver_path):
+                    import shutil
+                    shutil.copy(extracted_driver_path, chromedriver_path)
+                    logger.info(f"ChromeDriver downloaded and extracted to {chromedriver_path}")
+                else:
+                    logger.error(f"ChromeDriver not found in extracted files at {extracted_driver_path}")
+                    raise FileNotFoundError(f"ChromeDriver not found in extracted files")
             else:
-                logger.error(f"ChromeDriver not found in extracted files at {extracted_driver_path}")
-                raise FileNotFoundError(f"ChromeDriver not found in extracted files")
+                # Download the latest stable ChromeDriver for Linux
+                logger.info("Downloading ChromeDriver for Linux...")
+                chromedriver_url = "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/linux64/chromedriver-linux64.zip"
+
+                # Download the zip file
+                response = requests.get(chromedriver_url)
+                response.raise_for_status()  # Raise an exception for HTTP errors
+
+                # Extract the zip file
+                with zipfile.ZipFile(io.BytesIO(response.content)) as zip_file:
+                    zip_file.extractall(chromedriver_dir)
+
+                # The extracted path will be in a subdirectory
+                extracted_driver_path = os.path.join(chromedriver_dir, "chromedriver-linux64", "chromedriver")
+
+                # Move the chromedriver to the main directory
+                if os.path.exists(extracted_driver_path):
+                    import shutil
+                    shutil.copy(extracted_driver_path, chromedriver_path)
+                    # Make it executable
+                    os.chmod(chromedriver_path, 0o755)
+                    logger.info(f"ChromeDriver downloaded and extracted to {chromedriver_path}")
+                else:
+                    logger.error(f"ChromeDriver not found in extracted files at {extracted_driver_path}")
+                    raise FileNotFoundError(f"ChromeDriver not found in extracted files")
+
+            return chromedriver_path
 
         except Exception as e:
             logger.error(f"Error downloading ChromeDriver: {e}")
