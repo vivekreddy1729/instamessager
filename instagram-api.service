@@ -6,6 +6,7 @@ After=network.target
 User=ubuntu
 WorkingDirectory=/home/ubuntu/instagram-api
 Environment="PATH=/home/ubuntu/instagram-api/venv/bin:/usr/local/bin:/usr/bin"
+Environment="PYTHONPATH=/home/ubuntu/instagram-api"
 Environment="DISPLAY=:99"
 Environment="PYTHONUNBUFFERED=1"
 Environment="PYTHONIOENCODING=UTF-8"
@@ -16,8 +17,8 @@ Environment="CHROME_PATH=/usr/bin/google-chrome-stable"
 # Start Xvfb virtual display
 ExecStartPre=/usr/bin/Xvfb :99 -screen 0 1280x1024x24 -ac
 
-# Start the API
-ExecStart=/home/ubuntu/instagram-api/venv/bin/python /home/ubuntu/instagram-api/run_api.py
+# Start the API using the wrapper script
+ExecStart=/bin/bash /home/ubuntu/instagram-api/start_api.sh
 
 # Restart settings
 Restart=on-failure
