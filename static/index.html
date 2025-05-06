@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Message Sender API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #405DE6;
+            text-align: center;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #405DE6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #3951C6;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #405DE6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .api-info {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Instagram Message Sender API</h1>
+    
+    <div class="container">
+        <h2>Send Instagram Message</h2>
+        <form id="messageForm">
+            <div>
+                <label for="recipient">Recipient Username:</label>
+                <input type="text" id="recipient" name="recipient" required>
+            </div>
+            
+            <div>
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" required></textarea>
+            </div>
+            
+            <button type="submit">Send Message</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Sending message... This may take a few moments.</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+    
+    <div class="api-info">
+        <h2>API Information</h2>
+        <p>This is a simple web interface for the Instagram Message Sender API. You can also use the API directly:</p>
+        
+        <h3>Send Message Endpoint</h3>
+        <p><code>POST /send-message</code></p>
+        <p>Request Body:</p>
+        <pre><code>{
+  "recipient": "username_to_message",
+  "message": "Your message here"
+}</code></pre>
+        
+        <h3>Health Check</h3>
+        <p><code>GET /health</code></p>
+        
+        <h3>Restart Session</h3>
+        <p><code>POST /restart</code></p>
+    </div>
+    
+    <script>
+        document.getElementById('messageForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const recipient = document.getElementById('recipient').value;
+            const message = document.getElementById('message').value;
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            
+            // Clear previous results
+            resultDiv.innerHTML = '';
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'none';
+            
+            // Show loading spinner
+            loadingDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recipient: recipient,
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading spinner
+                loadingDiv.style.display = 'none';
+                
+                // Show result
+                resultDiv.style.display = 'block';
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `<strong>Success!</strong> ${data.message}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                loadingDiv.style.display = 'none';
+                
+                // Show error
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>Error:</strong> Could not connect to the API server. Make sure the server is running.`;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
