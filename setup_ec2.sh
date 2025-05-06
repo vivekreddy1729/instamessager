@@ -27,6 +27,38 @@ rm ./google-chrome-stable_current_amd64.deb
 echo "Installing Xvfb for headless browser support..."
 sudo apt install -y xvfb libxi6 libgconf-2-4
 
+# Install additional dependencies
+echo "Installing additional dependencies..."
+sudo apt install -y unzip curl
+
+# Download and install ChromeDriver
+echo "Downloading and installing ChromeDriver..."
+CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+echo "Detected Chrome version: $CHROME_VERSION"
+
+# Download the latest ChromeDriver for the detected Chrome version
+CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/linux64/chromedriver-linux64.zip"
+echo "Downloading ChromeDriver from: $CHROMEDRIVER_URL"
+
+# Download and extract ChromeDriver
+wget -O chromedriver_linux64.zip $CHROMEDRIVER_URL
+unzip chromedriver_linux64.zip
+rm chromedriver_linux64.zip
+
+# Move ChromeDriver to the parent directory (root folder)
+echo "Moving ChromeDriver to the parent directory..."
+cp chromedriver-linux64/chromedriver ../chromedriver
+chmod +x ../chromedriver
+
+# Also keep a copy in the project directory
+echo "Keeping a copy in the project directory..."
+mkdir -p chromedriver
+cp chromedriver-linux64/chromedriver chromedriver/
+chmod +x chromedriver/chromedriver
+
+# Clean up
+rm -rf chromedriver-linux64
+
 # Create and activate virtual environment
 echo "Setting up Python virtual environment..."
 python3 -m venv venv
@@ -42,11 +74,12 @@ sudo cp instagram-api.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable instagram-api
 
-# Make sure the ChromeDriver directory exists
-mkdir -p chromedriver
-
 echo ""
 echo "===== Setup Complete ====="
+echo "ChromeDriver has been installed in:"
+echo "- $(pwd)/chromedriver/chromedriver"
+echo "- $(dirname $(pwd))/chromedriver"
+echo ""
 echo "To start the service, run: sudo systemctl start instagram-api"
 echo "To check service status: sudo systemctl status instagram-api"
 echo "To view logs: sudo journalctl -u instagram-api -f"
