@@ -5,6 +5,7 @@ import requests
 import zipfile
 import io
 import sys
+import platform
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -57,7 +58,14 @@ class InstagramMessageSender:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--start-maximized")
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+
+        # Set a platform-appropriate user agent
+        if platform.system() == "Windows":
+            user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+        else:  # Linux/Ubuntu
+            user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+
+        chrome_options.add_argument(f"--user-agent={user_agent}")
 
         # Download ChromeDriver if it doesn't exist
         chromedriver_path = self._download_chromedriver()
@@ -76,9 +84,20 @@ class InstagramMessageSender:
         """
         logger.info("Checking for ChromeDriver...")
 
-        # Define the ChromeDriver path
+        # Define the ChromeDriver path based on OS
         chromedriver_dir = os.path.join(os.getcwd(), "chromedriver")
-        chromedriver_path = os.path.join(chromedriver_dir, "chromedriver.exe")
+
+        # Use the appropriate executable name based on platform
+        if platform.system() == "Windows":
+            chromedriver_filename = "chromedriver.exe"
+            platform_name = "win32"
+            zip_dirname = "chromedriver-win32"
+        else:  # Linux/Ubuntu
+            chromedriver_filename = "chromedriver"
+            platform_name = "linux64"
+            zip_dirname = "chromedriver-linux64"
+
+        chromedriver_path = os.path.join(chromedriver_dir, chromedriver_filename)
 
         # Check if ChromeDriver already exists
         if os.path.exists(chromedriver_path):
@@ -89,9 +108,9 @@ class InstagramMessageSender:
         if not os.path.exists(chromedriver_dir):
             os.makedirs(chromedriver_dir)
 
-        # Download the latest stable ChromeDriver for Windows
-        logger.info("Downloading ChromeDriver for Windows...")
-        chromedriver_url = "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/win32/chromedriver-win32.zip"
+        # Download the latest stable ChromeDriver for the current platform
+        logger.info(f"Downloading ChromeDriver for {platform.system()}...")
+        chromedriver_url = f"https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.49/{platform_name}/{zip_dirname}.zip"
 
         try:
             # Download the zip file
@@ -103,12 +122,17 @@ class InstagramMessageSender:
                 zip_file.extractall(chromedriver_dir)
 
             # The extracted path will be in a subdirectory
-            extracted_driver_path = os.path.join(chromedriver_dir, "chromedriver-win32", "chromedriver.exe")
+            extracted_driver_path = os.path.join(chromedriver_dir, zip_dirname, chromedriver_filename)
 
-            # Move the chromedriver.exe to the main directory
+            # Move the chromedriver to the main directory
             if os.path.exists(extracted_driver_path):
                 import shutil
                 shutil.copy(extracted_driver_path, chromedriver_path)
+
+                # Make the chromedriver executable on Linux
+                if platform.system() != "Windows":
+                    os.chmod(chromedriver_path, 0o755)
+
                 logger.info(f"ChromeDriver downloaded and extracted to {chromedriver_path}")
                 return chromedriver_path
             else:

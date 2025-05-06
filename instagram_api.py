@@ -27,6 +27,58 @@ instagram_sender = None
 sender_lock = threading.Lock()
 is_initialized = False
 
+# Create static directory if it doesn't exist
+static_dir = os.path.join(os.getcwd(), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+    # Create a simple index.html file
+    with open(os.path.join(static_dir, "index.html"), "w") as f:
+        f.write("""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instagram Message API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        h1 { color: #3897f0; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .endpoint { background: #f5f5f5; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Instagram Message API</h1>
+        <p>This API allows you to send direct messages to Instagram users.</p>
+
+        <div class="endpoint">
+            <h2>Send a Message</h2>
+            <p><strong>Endpoint:</strong> <code>/send-message</code></p>
+            <p><strong>Method:</strong> POST</p>
+            <p><strong>Content-Type:</strong> application/json</p>
+            <p><strong>Request Body:</strong></p>
+            <pre><code>{
+  "recipient": "username_to_message",
+  "message": "Your message here"
+}</code></pre>
+        </div>
+
+        <div class="endpoint">
+            <h2>Health Check</h2>
+            <p><strong>Endpoint:</strong> <code>/health</code></p>
+            <p><strong>Method:</strong> GET</p>
+        </div>
+
+        <div class="endpoint">
+            <h2>Restart Session</h2>
+            <p><strong>Endpoint:</strong> <code>/restart</code></p>
+            <p><strong>Method:</strong> POST</p>
+        </div>
+    </div>
+</body>
+</html>
+        """)
+
 # Create Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes

@@ -1,0 +1,184 @@
+# Instagram Message Sender API - Ubuntu Setup Guide
+
+This guide provides instructions for setting up and running the Instagram Message Sender API on Ubuntu.
+
+## Prerequisites
+
+- Ubuntu 18.04 or newer
+- Internet connection
+- Sudo privileges
+
+## Quick Setup
+
+1. Run the setup script to install all dependencies:
+   ```bash
+   ./setup_ubuntu.sh
+   ```
+
+   This script will:
+   - Install Python 3 and pip
+   - Install Google Chrome
+   - Install required Python packages
+   - Create a default .env file if one doesn't exist
+   - Make the run_api.py script executable
+
+2. Edit the .env file with your Instagram credentials:
+   ```bash
+   nano .env
+   ```
+
+   Update the following lines:
+   ```
+   INSTAGRAM_USERNAME=your_actual_username
+   INSTAGRAM_PASSWORD=your_actual_password
+   ```
+
+3. Run the API server:
+   ```bash
+   python3 run_api.py
+   ```
+
+## Manual Setup
+
+If you prefer to set up manually or the setup script doesn't work for you:
+
+1. Install Python 3 and pip:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y python3 python3-pip
+   ```
+
+2. Install Chrome dependencies:
+   ```bash
+   sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4 default-jdk
+   ```
+
+3. Install Google Chrome:
+   ```bash
+   wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+   sudo apt install -y ./google-chrome-stable_current_amd64.deb
+   rm google-chrome-stable_current_amd64.deb
+   ```
+
+4. Install Python dependencies:
+   ```bash
+   pip3 install selenium requests flask flask-cors python-dotenv gunicorn
+   ```
+
+5. Create or edit the .env file:
+   ```bash
+   nano .env
+   ```
+
+   Add the following content:
+   ```
+   # Instagram Credentials
+   INSTAGRAM_USERNAME=your_username_here
+   INSTAGRAM_PASSWORD=your_password_here
+
+   # Default recipient (optional)
+   DEFAULT_RECIPIENT=default_recipient_username
+
+   # Default message (optional)
+   DEFAULT_MESSAGE=Hello! This is a default message.
+
+   # Browser settings
+   HEADLESS=true  # Set to true for headless mode, false to see the browser
+
+   # API settings
+   PORT=5000
+   GUNICORN_WORKERS=1
+   ```
+
+6. Run the API server:
+   ```bash
+   python3 run_api.py
+   ```
+
+## Testing the API
+
+1. Check if the API is running:
+   ```bash
+   curl http://localhost:5000/health
+   ```
+
+2. Send a test message:
+   ```bash
+   python3 test_api_client.py recipient_username "Your message here"
+   ```
+
+   Or using curl:
+   ```bash
+   curl -X POST http://localhost:5000/send-message \
+     -H "Content-Type: application/json" \
+     -d '{"recipient":"username_to_message","message":"Your message here"}'
+   ```
+
+## Troubleshooting
+
+1. **ChromeDriver Issues**:
+   - The code will automatically download the appropriate ChromeDriver for Linux
+   - If you encounter issues, you can manually download ChromeDriver from https://chromedriver.chromium.org/downloads
+   - Place it in a directory named "chromedriver" in the project root
+
+2. **Permission Issues**:
+   - If you encounter permission issues with ChromeDriver, run:
+     ```bash
+     chmod +x chromedriver/chromedriver
+     ```
+
+3. **Headless Mode**:
+   - If you're having issues with headless mode, try setting `HEADLESS=false` in the .env file
+   - This will open a visible Chrome window so you can see what's happening
+
+4. **Instagram Security Challenges**:
+   - If Instagram requires security verification, you may need to log in manually first
+   - Try running with `HEADLESS=false` to see and respond to security challenges
+
+5. **Logs and Screenshots**:
+   - Check the log file: `cat instagram_api.log`
+   - Look at the screenshots saved in the project directory for debugging
+
+## Running as a Service
+
+To run the API as a background service that starts automatically:
+
+1. Create a systemd service file:
+   ```bash
+   sudo nano /etc/systemd/system/instagram-api.service
+   ```
+
+2. Add the following content (adjust paths as needed):
+   ```
+   [Unit]
+   Description=Instagram Message API
+   After=network.target
+
+   [Service]
+   User=your_username
+   WorkingDirectory=/path/to/instagram-api
+   ExecStart=/usr/bin/python3 /path/to/instagram-api/run_api.py
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+3. Enable and start the service:
+   ```bash
+   sudo systemctl enable instagram-api
+   sudo systemctl start instagram-api
+   ```
+
+4. Check the status:
+   ```bash
+   sudo systemctl status instagram-api
+   ```
+
+## Security Considerations
+
+- Never expose this API directly to the internet without proper authentication
+- Consider running behind a reverse proxy like Nginx with authentication
+- Use a dedicated Instagram account for this API
+- Be aware that automated interactions with Instagram may violate their terms of service
