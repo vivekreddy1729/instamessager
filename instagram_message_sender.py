@@ -5,6 +5,7 @@ import requests
 import zipfile
 import io
 import sys
+import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -15,11 +16,45 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+def setup_logging():
+    """Set up logging with file and console handlers"""
+    # Create logs directory if it doesn't exist
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+
+    # Create a timestamp for the log file
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join("logs", f"instagram_message_sender_{timestamp}.log")
+
+    # Configure the logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # Create file handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    # Create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    # Prevent log propagation to avoid duplicate logs
+    logger.propagate = False
+
+    return logger, log_file
+
+# Set up the logger
+logger, current_log_file = setup_logging()
+logger.info(f"Logging initialized. Log file: {current_log_file}")
 
 class InstagramMessageSender:
     def __init__(self, headless=True):
@@ -30,7 +65,70 @@ class InstagramMessageSender:
             headless (bool): Whether to run the browser in headless mode
         """
         self.base_url = "https://www.instagram.com/"
+        self.current_username = None  # Will store the current recipient username
+        self.screenshot_folder = None  # Will store the path to the screenshot folder
+        self.log_file = current_log_file  # Store the current log file path
         self.driver = self._setup_driver(headless)
+
+    def _create_screenshot_folder(self):
+        """
+        Create a folder for storing screenshots for the current session
+
+        Returns:
+            str: Path to the screenshot folder
+        """
+        # Create a screenshots directory if it doesn't exist
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
+
+        # Create a timestamp for the folder
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Create a folder name with username and timestamp
+        folder_name = f"{self.current_username}_{timestamp}" if self.current_username else f"session_{timestamp}"
+        folder_path = os.path.join("screenshots", folder_name)
+
+        # Create the folder if it doesn't exist
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            logger.info(f"Created screenshot folder: {folder_path}")
+
+            # Create a session-specific log file in the same folder
+            session_log_file = os.path.join(folder_path, f"session_{timestamp}.log")
+
+            # Add a file handler for this session
+            file_handler = logging.FileHandler(session_log_file)
+            file_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            # Update the log file path
+            self.log_file = session_log_file
+            logger.info(f"Session log file created: {session_log_file}")
+
+        return folder_path
+
+    def _get_screenshot_filename(self, base_name):
+        """
+        Generate a screenshot filename and ensure it's saved in the user's folder
+
+        Args:
+            base_name (str): The base name of the screenshot
+
+        Returns:
+            str: The full path to the screenshot file
+        """
+        # Create the screenshot folder if it doesn't exist yet
+        if not self.screenshot_folder:
+            self.screenshot_folder = self._create_screenshot_folder()
+
+        # Generate the filename (just the base name with timestamp, no need for username prefix since it's in the folder)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{base_name}_{timestamp}.png"
+
+        # Return the full path
+        return os.path.join(self.screenshot_folder, filename)
 
     def _setup_driver(self, headless):
         """
@@ -131,6 +229,8 @@ class InstagramMessageSender:
             bool: True if login successful, False otherwise
         """
         logger.info(f"Attempting to log in as {username}...")
+        # Reset the screenshot folder for this login session
+        self.screenshot_folder = None
 
         try:
             # Navigate to Instagram login page
@@ -209,8 +309,9 @@ class InstagramMessageSender:
                                 logger.warning("Could not determine login status. Proceeding anyway...")
 
             # Take a screenshot to verify login status
-            self.driver.save_screenshot("login_status.png")
-            logger.info("Login process completed. Screenshot saved as 'login_status.png'")
+            screenshot_filename = self._get_screenshot_filename("login_status")
+            self.driver.save_screenshot(screenshot_filename)
+            logger.info(f"Login process completed. Screenshot saved as '{screenshot_filename}'")
 
             # Check if we're actually logged in by looking for common elements on the home page
             try:
@@ -257,6 +358,10 @@ class InstagramMessageSender:
             bool: True if message sent successfully, False otherwise
         """
         logger.info(f"Attempting to send message to {recipient_username}...")
+        # Set the current username for screenshot naming
+        self.current_username = recipient_username
+        # Reset the screenshot folder for this new message request
+        self.screenshot_folder = None
 
         try:
             # First, try to navigate to the user's profile to check if we need to follow them
@@ -266,13 +371,15 @@ class InstagramMessageSender:
             time.sleep(2)
 
             # Take a screenshot of the user's profile
-            self.driver.save_screenshot("user_profile.png")
-            logger.info("Screenshot of user profile saved as 'user_profile.png'")
+            screenshot_filename = self._get_screenshot_filename("user_profile")
+            self.driver.save_screenshot(screenshot_filename)
+            logger.info(f"Screenshot of user profile saved as '{screenshot_filename}'")
 
             # Check if we need to follow the user first - this is critical
             try:
                 logger.info("Looking for follow button with multiple strategies...")
-                self.driver.save_screenshot("before_follow_attempt.png")
+                screenshot_filename = self._get_screenshot_filename("before_follow_attempt")
+                self.driver.save_screenshot(screenshot_filename)
 
                 # Based on the exact HTML structure provided
                 logger.info("Looking for follow button with exact structure provided...")
@@ -390,7 +497,8 @@ class InstagramMessageSender:
                 if follow_button:
                     logger.info(f"Following user {recipient_username} first...")
                     # Take a screenshot of the follow button before clicking
-                    self.driver.save_screenshot("follow_button_found.png")
+                    screenshot_filename = self._get_screenshot_filename("follow_button_found")
+                    self.driver.save_screenshot(screenshot_filename)
 
                     # Try multiple click methods with retries
                     max_attempts = 3
@@ -419,7 +527,8 @@ class InstagramMessageSender:
                             time.sleep(2)
 
                             # Take a screenshot after the click attempt
-                            self.driver.save_screenshot(f"follow_click_attempt_{attempt+1}.png")
+                            screenshot_filename = self._get_screenshot_filename(f"follow_click_attempt_{attempt+1}")
+                            self.driver.save_screenshot(screenshot_filename)
 
                             # Check if the button text changed to "Following" or "Requested"
                             success_indicators = ["Following", "Requested", "Unfollow"]
@@ -469,7 +578,8 @@ class InstagramMessageSender:
                     time.sleep(3)  # Increased wait time to ensure follow completes
 
                     # Take screenshot after follow attempt
-                    self.driver.save_screenshot("after_follow_attempt.png")
+                    screenshot_filename = self._get_screenshot_filename("after_follow_attempt")
+                    self.driver.save_screenshot(screenshot_filename)
 
                     # Check for and handle any popups that might appear after following
                     try:
@@ -486,7 +596,8 @@ class InstagramMessageSender:
                                         logger.info(f"Found popup with '{button_text}' button, dismissing it")
                                         self.driver.execute_script("arguments[0].click();", button)
                                         time.sleep(1)
-                                        self.driver.save_screenshot("popup_dismissed.png")
+                                        screenshot_filename = self._get_screenshot_filename("popup_dismissed")
+                                        self.driver.save_screenshot(screenshot_filename)
                                         break
                             except:
                                 continue
@@ -495,7 +606,8 @@ class InstagramMessageSender:
 
                     # Final verification of follow status
                     logger.info("Performing final verification of follow status...")
-                    self.driver.save_screenshot("before_final_verification.png")
+                    screenshot_filename = self._get_screenshot_filename("before_final_verification")
+                    self.driver.save_screenshot(screenshot_filename)
 
                     # Check if we need to refresh the page for a clean state
                     try:
@@ -588,7 +700,8 @@ class InstagramMessageSender:
                                                 self.driver.execute_script("arguments[0].click();", button)
 
                                             time.sleep(3)
-                                            self.driver.save_screenshot("final_follow_attempt.png")
+                                            screenshot_filename = self._get_screenshot_filename("final_follow_attempt")
+                                            self.driver.save_screenshot(screenshot_filename)
                                             break
                                 else:
                                     logger.warning("No follow button found in final attempt")
@@ -598,10 +711,12 @@ class InstagramMessageSender:
                         logger.warning(f"Error during follow verification: {verify_error}")
                 else:
                     logger.info(f"Already following user {recipient_username} or follow button not found")
-                    self.driver.save_screenshot("no_follow_button_found.png")
+                    screenshot_filename = self._get_screenshot_filename("no_follow_button_found")
+                    self.driver.save_screenshot(screenshot_filename)
             except Exception as e:
                 logger.warning(f"Error during follow process: {e}")
-                self.driver.save_screenshot("follow_error.png")
+                screenshot_filename = self._get_screenshot_filename("follow_error")
+                self.driver.save_screenshot(screenshot_filename)
 
             # Now look for the message button on the profile
             try:
@@ -666,7 +781,8 @@ class InstagramMessageSender:
                     time.sleep(3)
 
                     # Take a screenshot after clicking message button
-                    self.driver.save_screenshot("after_message_button.png")
+                    screenshot_filename = self._get_screenshot_filename("after_message_button")
+                    self.driver.save_screenshot(screenshot_filename)
 
                     # Check for any confirmation dialogs that might appear when clicking message
                     try:
@@ -697,11 +813,13 @@ class InstagramMessageSender:
                         logger.info("Entered message text")
 
                         # Take a screenshot before sending
-                        self.driver.save_screenshot("before_send.png")
+                        screenshot_filename = self._get_screenshot_filename("before_send")
+                        self.driver.save_screenshot(screenshot_filename)
 
                         # Find and click the send button using the exact structure provided
                         logger.info("Looking for send button with exact structure provided...")
-                        self.driver.save_screenshot("looking_for_send_button.png")
+                        screenshot_filename = self._get_screenshot_filename("looking_for_send_button")
+                        self.driver.save_screenshot(screenshot_filename)
 
                         # Try multiple approaches to find the send button
                         send_button = None
@@ -788,7 +906,8 @@ class InstagramMessageSender:
                                 logger.debug(f"Could not find send button with JavaScript: {e}")
 
                         # Take a screenshot of the current state
-                        self.driver.save_screenshot("before_send_button_click.png")
+                        screenshot_filename = self._get_screenshot_filename("before_send_button_click")
+                        self.driver.save_screenshot(screenshot_filename)
 
                         # Click the send button if found
                         if send_button:
@@ -811,17 +930,20 @@ class InstagramMessageSender:
                             time.sleep(2)
 
                             # Take a screenshot after sending
-                            self.driver.save_screenshot("after_send.png")
+                            screenshot_filename = self._get_screenshot_filename("after_send")
+                            self.driver.save_screenshot(screenshot_filename)
 
                             logger.info(f"Message sent to {recipient_username} successfully!")
                             return True
                         else:
                             logger.error("Could not find send button")
-                            self.driver.save_screenshot("send_button_not_found.png")
+                            screenshot_filename = self._get_screenshot_filename("send_button_not_found")
+                            self.driver.save_screenshot(screenshot_filename)
                             return False
                     except TimeoutException:
                         logger.error("Could not find message input field")
-                        self.driver.save_screenshot("message_input_not_found.png")
+                        screenshot_filename = self._get_screenshot_filename("message_input_not_found")
+                        self.driver.save_screenshot(screenshot_filename)
                         return False
                 else:
                     logger.warning("Message button not found on profile, trying alternative method...")
@@ -836,8 +958,9 @@ class InstagramMessageSender:
             time.sleep(2)
 
             # Take a screenshot of the inbox page
-            self.driver.save_screenshot("inbox_page.png")
-            logger.info("Screenshot of inbox page saved as 'inbox_page.png'")
+            screenshot_filename = self._get_screenshot_filename("inbox_page")
+            self.driver.save_screenshot(screenshot_filename)
+            logger.info(f"Screenshot of inbox page saved as '{screenshot_filename}'")
 
             # Wait for the page to load and look for the "Send message" button
             try:
@@ -875,8 +998,9 @@ class InstagramMessageSender:
             time.sleep(2)  # Give time for search results to appear
 
             # Take a screenshot of search results
-            self.driver.save_screenshot("search_results.png")
-            logger.info("Screenshot of search results saved as 'search_results.png'")
+            screenshot_filename = self._get_screenshot_filename("search_results")
+            self.driver.save_screenshot(screenshot_filename)
+            logger.info(f"Screenshot of search results saved as '{screenshot_filename}'")
 
             # Try different XPath patterns to find the recipient
             recipient_xpath_patterns = [
@@ -926,11 +1050,13 @@ class InstagramMessageSender:
                 logger.info("Entered message text")
 
                 # Take a screenshot before sending
-                self.driver.save_screenshot("before_send.png")
+                screenshot_filename = self._get_screenshot_filename("before_send")
+                self.driver.save_screenshot(screenshot_filename)
 
                 # Find and click the send button using the exact structure provided
                 logger.info("Looking for send button with exact structure provided...")
-                self.driver.save_screenshot("looking_for_send_button_inbox.png")
+                screenshot_filename = self._get_screenshot_filename("looking_for_send_button_inbox")
+                self.driver.save_screenshot(screenshot_filename)
 
                 # Try multiple approaches to find the send button
                 send_button = None
@@ -1037,36 +1163,46 @@ class InstagramMessageSender:
                         raise
                 else:
                     logger.error("Could not find send button with any method")
-                    self.driver.save_screenshot("send_button_not_found_inbox.png")
+                    screenshot_filename = self._get_screenshot_filename("send_button_not_found_inbox")
+                    self.driver.save_screenshot(screenshot_filename)
                     raise Exception("Send button not found")
 
                 # Wait a moment to ensure the message is sent
                 time.sleep(2)
 
                 # Take a screenshot after sending
-                self.driver.save_screenshot("after_send.png")
+                screenshot_filename = self._get_screenshot_filename("after_send")
+                self.driver.save_screenshot(screenshot_filename)
 
                 logger.info(f"Message sent to {recipient_username} successfully!")
                 return True
             except TimeoutException:
                 logger.error("Could not find message input field")
-                self.driver.save_screenshot("message_input_not_found.png")
+                screenshot_filename = self._get_screenshot_filename("message_input_not_found")
+                self.driver.save_screenshot(screenshot_filename)
                 return False
 
         except TimeoutException as e:
             logger.error(f"Timeout during message sending: {e}")
-            self.driver.save_screenshot("timeout_error.png")
+            screenshot_filename = self._get_screenshot_filename("timeout_error")
+            self.driver.save_screenshot(screenshot_filename)
             return False
         except Exception as e:
             logger.error(f"Error during message sending: {e}")
-            self.driver.save_screenshot("general_error.png")
+            screenshot_filename = self._get_screenshot_filename("general_error")
+            self.driver.save_screenshot(screenshot_filename)
             return False
 
     def close(self):
         """Close the WebDriver"""
         if self.driver:
             self.driver.quit()
-            logger.info("WebDriver closed.")
+            if self.screenshot_folder:
+                logger.info(f"WebDriver closed. Screenshots saved in: {self.screenshot_folder}")
+                logger.info(f"Session logs saved in: {self.log_file}")
+            else:
+                logger.info("WebDriver closed.")
+                logger.info(f"Main log file: {self.log_file}")
 
 def load_env_file():
     """Load environment variables from .env file"""
@@ -1184,10 +1320,20 @@ def main():
             print(f"\nAttempting to send message to {recipient_username}...")
             if sender.send_message(recipient_username, message):
                 print(f"\nMessage sent to {recipient_username} successfully!")
-                print("\nScreenshots have been saved to the current directory for verification.")
+                if sender.screenshot_folder:
+                    print(f"\nScreenshots have been saved to: {sender.screenshot_folder}")
+                    print(f"Session logs have been saved to: {sender.log_file}")
+                else:
+                    print("\nScreenshots have been saved to the screenshots directory.")
+                    print(f"Logs have been saved to: {sender.log_file}")
             else:
                 print(f"\nFailed to send message to {recipient_username}.")
-                print("Check the log and screenshots for more details.")
+                if sender.screenshot_folder:
+                    print(f"Check the logs and screenshots in: {sender.screenshot_folder}")
+                    print(f"Session log file: {sender.log_file}")
+                else:
+                    print("Check the logs and screenshots for more details.")
+                    print(f"Main log file: {sender.log_file}")
         else:
             print("\nLogin failed. Please check your credentials and try again.")
             print("If you're seeing security verification requests, you may need to log in manually first.")

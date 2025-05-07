@@ -30,8 +30,10 @@ ENV/
 # ChromeDriver
 chromedriver/
 
-# Screenshots
+# Screenshots and logs
 *.png
+screenshots/
+logs/
 
 # IDE
 .idea/

@@ -45,8 +45,14 @@ def initialize_sender():
         return False
 
     try:
-        # Create Instagram Message Sender instance (headless mode)
-        instagram_sender = InstagramMessageSender(headless=True)
+        # Get headless mode from environment variables
+        headless_env = os.getenv("HEADLESS", "false").lower()
+        headless = headless_env in ("true", "yes", "1", "t", "y")
+
+        # Create Instagram Message Sender instance with headless mode from environment
+        instagram_sender = InstagramMessageSender(headless=headless)
+
+        logger.info(f"Running in {'headless' if headless else 'visible'} mode")
 
         # Login to Instagram
         logger.info(f"Logging in as {instagram_username}...")

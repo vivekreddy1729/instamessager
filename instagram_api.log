@@ -1,0 +1,39 @@
+2025-05-06 20:25:09,067 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.17.227:5000
+2025-05-06 20:25:09,126 - INFO - [33mPress CTRL+C to quit[0m
+2025-05-06 20:25:10,583 - INFO - Running in visible mode
+2025-05-06 20:25:10,584 - INFO - Logging in as us_cinema_goers...
+2025-05-06 20:25:37,879 - INFO - Login successful!
+2025-05-06 20:26:13,033 - INFO - Sending message to gangsterrvivek...
+2025-05-06 20:26:48,245 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-06 20:26:48,246 - INFO - 73.254.235.134 - - [06/May/2025 20:26:48] "POST /send-message HTTP/1.1" 200 -
+2025-05-06 20:28:35,774 - INFO - Sending message to gangsterrvivek...
+2025-05-06 20:29:07,994 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-06 20:29:07,995 - INFO - 73.254.235.134 - - [06/May/2025 20:29:07] "POST /send-message HTTP/1.1" 200 -
+2025-05-06 20:29:36,115 - INFO - Sending message to gangsterrvivek...
+2025-05-06 20:30:09,993 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-06 20:30:09,993 - INFO - 73.254.235.134 - - [06/May/2025 20:30:09] "POST /send-message HTTP/1.1" 200 -
+2025-05-06 20:30:59,508 - INFO - Sending message to gangsterrvivek...
+2025-05-06 20:31:28,275 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-06 20:31:28,276 - INFO - 34.96.45.129 - - [06/May/2025 20:31:28] "POST /send-message HTTP/1.1" 200 -
+2025-05-06 21:31:38,128 - INFO - Sending message to gangsterrvivek...
+2025-05-06 21:32:07,342 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-06 21:32:07,342 - INFO - 34.96.45.129 - - [06/May/2025 21:32:07] "POST /send-message HTTP/1.1" 200 -
+2025-05-06 21:37:16,969 - INFO - 205.210.31.220 - - [06/May/2025 21:37:16] "GET / HTTP/1.0" 200 -
+2025-05-06 22:23:53,732 - INFO - 18.216.250.94 - - [06/May/2025 22:23:53] "GET / HTTP/1.1" 200 -
+2025-05-06 22:26:17,883 - INFO - 18.216.250.94 - - [06/May/2025 22:26:17] "GET / HTTP/1.1" 200 -
+2025-05-06 22:28:04,366 - ERROR - 18.216.250.94 - - [06/May/2025 22:28:04] code 400, message Bad request version ('oAJM')
+2025-05-06 22:28:04,366 - INFO - 18.216.250.94 - - [06/May/2025 22:28:04] "[31m[1m\x16\x03\x01\x00{\x01\x00\x00w\x03\x03\\$8ñ\x04éòÜý\x1fëÁ\x00\x14=Ú:\x01Ï4T"ü\x1eoAJM[0m" 400 -
+2025-05-06 22:30:31,303 - ERROR - 18.216.250.94 - - [06/May/2025 22:30:31] code 400, message Bad request syntax ('SSH-2.0-Go')
+2025-05-06 22:30:31,303 - INFO - 18.216.250.94 - - [06/May/2025 22:30:31] "[31m[1mSSH-2.0-Go[0m" 400 -
+2025-05-06 22:30:52,097 - ERROR - 18.216.250.94 - - [06/May/2025 22:30:52] code 400, message Bad request version ('À\x14À')
+2025-05-06 22:30:52,098 - INFO - 18.216.250.94 - - [06/May/2025 22:30:52] "[31m[1m\x16\x03\x01\x00{\x01\x00\x00w\x03\x03p\x9c\x96\x95©\x1bbÞ\x1d2S¸L\x0d\x90\x1e\x91=N\x80\x05\x8eø@5ÑCSJUÏ|\x00\x00\x1aÀ/À+À\x11À\x07À\x13À\x09À\x14À[0m" 400 -
+2025-05-07 02:13:40,413 - INFO - Sending message to gangsterrvivek...
+2025-05-07 02:14:08,922 - INFO - Message sent to gangsterrvivek successfully!
+2025-05-07 02:14:08,923 - INFO - 34.96.45.195 - - [07/May/2025 02:14:08] "POST /send-message HTTP/1.1" 200 -
+2025-05-07 02:37:21,092 - ERROR - Unhandled exception: 405 Method Not Allowed: The method is not allowed for the requested URL.
+2025-05-07 02:37:21,093 - ERROR - Unhandled exception: 405 Method Not Allowed: The method is not allowed for the requested URL.
+2025-05-07 02:37:21,094 - INFO - 3.21.190.170 - - [07/May/2025 02:37:21] "[35m[1mGET /send-message HTTP/1.1[0m" 500 -
+2025-05-07 02:37:21,095 - INFO - 3.21.190.170 - - [07/May/2025 02:37:21] "[35m[1mGET /send-message HTTP/1.1[0m" 500 -
